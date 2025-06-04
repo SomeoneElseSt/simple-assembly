@@ -141,7 +141,9 @@ if uploaded_file is not None:
                     audio_urls_to_process = []
                     ids_to_process = []
 
-                    for idx, row in df.iterrows():
+                    valid_df = df[df[url_column].notna() & (df[url_column].astype(str).str.strip() != "")]
+                    
+                    for idx, row in valid_df.iterrows():
                         audio_url = str(row[url_column]).strip()
                         if pd.isna(audio_url) or audio_url == "":
                             st.info(f"Skipping empty row {idx}")
