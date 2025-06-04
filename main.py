@@ -144,8 +144,9 @@ if uploaded_file is not None:
                     for idx, row in df.iterrows():
                         audio_url = str(row[url_column]).strip()
                         if pd.isna(audio_url) or audio_url == "":
+                            st.info(f"Skipping empty row {idx}")
                             continue
-                        
+                    
                         if use_id_matching:
                             current_id = str(row[id_column])
                             if current_id not in processed_transcriptions:
@@ -153,6 +154,7 @@ if uploaded_file is not None:
                                 ids_to_process.append(current_id)
                         else:
                             audio_urls_to_process.append((idx, audio_url, str(idx)))
+
 
                     status_text.text(f"Found {len(audio_urls_to_process)} audio files to process")
                     
