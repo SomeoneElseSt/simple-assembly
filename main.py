@@ -46,7 +46,7 @@ with st.sidebar:
 
 st.title("Simple Assembly [transcription]")
 st.markdown("""
-This dashboard helps you transcribe audio files from URLs in your CSV/XLSX files and re-downloaded them with better transcriptions.
+This dashboard helps you transcribe audio files from URLs in your CSV/XLSX files and re-download them with better transcriptions.
 Upload your file, select the relevant columns, and start transcribing!
 """)
 
@@ -128,6 +128,12 @@ if uploaded_file is not None:
                     help="Choose the column containing unique IDs"
                 )
 
+        # NEW checkbox to filter URLs shorter than 30 characters
+        filter_min_len = st.checkbox(
+            "Skip URLs shorter than 30 chars",
+            help="Only send rows whose URL string length is > 30 characters"
+        )
+
         st.write("")
 
         if st.button("Start Transcription", use_container_width=True):
@@ -143,7 +149,11 @@ if uploaded_file is not None:
                     audio_urls_to_process = []
                     ids_to_process = []
 
+                    # initial filter: non-empty URLs
                     valid_df = df[df[url_column].notna() & (df[url_column].astype(str).str.strip() != "")]
+                    # optional extra filter
+                    if filter_min_len:
+                        valid_df = valid_df[valid_df[url_column].astype(str).str.len() > 30]
                     
                     for idx, row in valid_df.iterrows():
                         audio_url = str(row[url_column]).strip()
