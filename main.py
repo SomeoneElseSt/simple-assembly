@@ -50,7 +50,7 @@ This dashboard helps you transcribe audio files from URLs in your CSV/XLSX files
 Upload your file, select the relevant columns, and start transcribing!
 """)
 
-st.info("This will skip over empty rows by default, hence, the # of processing rows may be smaller than the rows in the file")
+st.info("This will skip over empty rows by default. Hence, the # of processing rows may be smaller than the rows in the file")
 
 uploaded_file = st.file_uploader(
     "Upload your CSV/XLSX file",
