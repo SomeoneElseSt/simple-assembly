@@ -147,12 +147,21 @@ if uploaded_file is not None:
                 st.error("Please enter a whole number.")
                 st.stop()
 
-        stop_words_str = st.text_input(
-            "Stop-words to exclude (comma-separated, e.g. refund,cancel,spam)",
-            value="",
-            key="stopwords",
+        stop_word_checkbox = st.checkbox(
+            "Exclude rows containing any of these stop-words",
+            help="Tick the box and enter comma-separated words below."
         )
-        stop_words = [w.strip().lower() for w in stop_words_str.split(",") if w.strip()]
+        
+        stop_words = []                          
+        if stop_word_checkbox:
+            stop_words_str = st.text_input(
+                "Stop-words (comma-separated, e.g. refund,cancel,spam)",
+                value="",
+                key="stopwords",
+            )
+            stop_words = [w.strip().lower() for w in stop_words_str.split(",") if w.strip()]
+        
+        st.write("")  
         
         st.write("")
         
