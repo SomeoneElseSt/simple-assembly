@@ -149,12 +149,23 @@ if uploaded_file is not None:
                     audio_urls_to_process = []
                     ids_to_process = []
 
-                    # initial filter: non-empty URLs
                     valid_df = df[df[url_column].notna() & (df[url_column].astype(str).str.strip() != "")]
-                    # optional extra filter
-                    if filter_min_len:
-                        valid_df = valid_df[valid_df[url_column].astype(str).str.len() > 30]
                     
+                    if filter_min_len:
+                        chars_str = st.text_input(
+                            "Enter the minimum number of chars a row must have to be processed.",
+                            value="50",
+                            key="chars",
+                        )
+                    
+                        try:
+                            min_chars = int(chars_str)
+                        except ValueError:
+                            st.error("Please enter a whole number.")
+                            st.stop()
+                    
+                        valid_df = valid_df[valid_df[url_column].astype(str).str.len() > min_chars]
+
                     for idx, row in valid_df.iterrows():
                         audio_url = str(row[url_column]).strip()
                         if pd.isna(audio_url) or audio_url == "":
