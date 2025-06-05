@@ -4,6 +4,7 @@ import requests
 import time
 import io
 import base64
+import re
 
 
 st.set_page_config(
@@ -129,14 +130,14 @@ if uploaded_file is not None:
                 )
 
         filter_min_len = st.checkbox(
-            "Filter by minimum char lenght in transcription rows",
+            "Filter by minimum char length in transcription rows",
             help="Will prompt you to input an int as the minimum amount of chars to process a row"
         )
 
         if filter_min_len:
             chars_str = st.text_input(
                 "Enter the minimum number of chars a row must have to be processed.",
-                value="50",
+                value="200",
                 key="chars",
             )
         
@@ -145,6 +146,15 @@ if uploaded_file is not None:
             except ValueError:
                 st.error("Please enter a whole number.")
                 st.stop()
+
+        stop_words_str = st.text_input(
+            "Stop-words to exclude (comma-separated, e.g. refund,cancel,spam)",
+            value="",
+            key="stopwords",
+        )
+        stop_words = [w.strip().lower() for w in stop_words_str.split(",") if w.strip()]
+        
+        st.write("")
         
         st.write("")
 
@@ -165,6 +175,10 @@ if uploaded_file is not None:
                     
                     if filter_min_len:
                         valid_df = valid_df[valid_df[transcript_column].astype(str).str.len() > min_chars]
+
+                    if stop_words:
+                        pattern = r'\b(' + '|'.join(map(re.escape, stop_words)) + r')\b'
+                        valid_df = valid_df[~valid_df[transcript_column].astype(str).str.lower().str.contains(pattern)]
 
                     for idx, row in valid_df.iterrows():
                         audio_url = str(row[url_column]).strip()
