@@ -128,12 +128,24 @@ if uploaded_file is not None:
                     help="Choose the column containing unique IDs"
                 )
 
-        # NEW checkbox to filter URLs shorter than 30 characters
         filter_min_len = st.checkbox(
-            "Skip URLs shorter than 30 chars",
-            help="Only send rows whose URL string length is > 30 characters"
+            "Filter by minimum char lenght in transcription rows",
+            help="Will prompt you to input an int as the minimum amount of chars to process a row"
         )
 
+        if filter_min_len:
+            chars_str = st.text_input(
+                "Enter the minimum number of chars a row must have to be processed.",
+                value="50",
+                key="chars",
+            )
+        
+            try:
+                min_chars = int(chars_str)
+            except ValueError:
+                st.error("Please enter a whole number.")
+                st.stop()
+        
         st.write("")
 
         if st.button("Start Transcription", use_container_width=True):
@@ -152,19 +164,7 @@ if uploaded_file is not None:
                     valid_df = df[df[url_column].notna() & (df[url_column].astype(str).str.strip() != "")]
                     
                     if filter_min_len:
-                        chars_str = st.text_input(
-                            "Enter the minimum number of chars a row must have to be processed.",
-                            value="50",
-                            key="chars",
-                        )
-                    
-                        try:
-                            min_chars = int(chars_str)
-                        except ValueError:
-                            st.error("Please enter a whole number.")
-                            st.stop()
-                    
-                        valid_df = valid_df[valid_df[url_column].astype(str).str.len() > min_chars]
+                        valid_df = valid_df[valid_df[transcript_column].astype(str).str.len() > min_chars]
 
                     for idx, row in valid_df.iterrows():
                         audio_url = str(row[url_column]).strip()
