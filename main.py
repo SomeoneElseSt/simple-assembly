@@ -92,13 +92,13 @@ if uploaded_file is not None:
                 st.error("Please enter a whole number.")
                 st.stop()
 
-        stop_word_checkbox = st.checkbox("Exclude rows with stop-words (comma-separated)")
+        stop_word_checkbox = st.checkbox("Exclude rows with stop-words (comma-separated)", key="stopword")
         stop_words = []
         if stop_word_checkbox:
             stop_words_str = st.text_input("Stop-words", value="", key="stopwords")
             stop_words = [w.strip().lower() for w in stop_words_str.split(",") if w.strip()]
 
-        stop_phrase_checkbox = st.checkbox("Exclude rows with stop-phrases (one per line)")
+        stop_phrase_checkbox = st.checkbox("Exclude rows with stop-phrases (one per line)", key="stophrase")
         stop_phrases = []
         if stop_phrase_checkbox:
             raw_phrases = st.text_area("Stop-phrases", height=120, key="stop_phrases")
