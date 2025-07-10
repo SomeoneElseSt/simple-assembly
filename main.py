@@ -107,6 +107,54 @@ def get_pyannote_diarization(audio_url: str, pyannote_token: str) -> Dict:
         return None
 
 # Assembly AI functions with diarization alignment
+@st.cache_data(show_spinner="Transcribing audio with AssemblyAI, this may take a while...", persist=True)
+def transcribe_only_assemblyai(audio_url: str, assemblyai_key: str, language: str = "es") -> str:
+    """Performs transcription using only AssemblyAI, with basic speaker labeling"""
+    headers = {"authorization": assemblyai_key, "content-type": "application/json"}
+    data = {
+        "audio_url": audio_url,
+        "language_code": language,
+        "speaker_labels": True,
+        "speakers_expected": 2
+    }
+
+    response = requests.post("https://api.assemblyai.com/v2/transcript", json=data, headers=headers)
+    if response.status_code != 200:
+        raise Exception(response.text)
+
+    transcript_id = response.json().get("id")
+    if not transcript_id:
+        raise Exception("No transcript ID received")
+
+    endpoint = f"https://api.assemblyai.com/v2/transcript/{transcript_id}"
+    for _ in range(120):
+        poll_response = requests.get(endpoint, headers=headers)
+        if poll_response.status_code != 200:
+            raise Exception(poll_response.text)
+        poll_data = poll_response.json()
+        status = poll_data.get("status")
+        if status == "completed":
+            utterances = poll_data.get("utterances", [])
+            if utterances:
+                transcription_text = ""
+                current_speaker = None
+                for utterance in utterances:
+                    if not isinstance(utterance, dict) or "speaker" not in utterance or "text" not in utterance:
+                        continue
+                    if current_speaker != utterance["speaker"]:
+                        current_speaker = utterance["speaker"]
+                        speaker_label = "asistente" if current_speaker == "A" else "cliente"
+                        transcription_text += f"\n{speaker_label}: {utterance['text']}"
+                    else:
+                        transcription_text += f" {utterance['text']}"
+                return transcription_text.strip()
+            else:
+                return poll_data.get("text", "No transcription available")
+        if status == "error":
+            raise Exception(poll_data.get("error", "Unknown error"))
+        time.sleep(3)
+    raise Exception("Timeout during transcription")
+
 def get_assemblyai_transcription(audio_url: str, assemblyai_key: str, language: str = "es") -> Dict:
     """Get transcription from AssemblyAI with word-level timestamps"""
     headers = {
@@ -365,6 +413,8 @@ if uploaded_file is not None:
             else:
                 transcript_column = st.selectbox("Transcription column", options=df.columns)
 
+        only_assembly_checkbox = st.checkbox("Only use AssemblyAI (skip Diarization/Claude)")
+
         col3, col4 = st.columns(2)
 
         with col3:
@@ -401,10 +451,10 @@ if uploaded_file is not None:
         if st.button("Start Transcription", use_container_width=True):
             if not assemblyai_key:
                 st.error("Add your AssemblyAI API key on the sidebar.")
-            elif not pyannote_key:
-                st.error("Add your Pyannote API key on the sidebar.")
-            elif not claude_key:
-                st.error("Add your Claude API key on the sidebar.")
+            elif not only_assembly_checkbox and not pyannote_key:
+                st.error("Add your Pyannote API key on the sidebar, or select 'Only use AssemblyAI'.")
+            elif not only_assembly_checkbox and not claude_key:
+                st.error("Add your Claude API key on the sidebar, or select 'Only use AssemblyAI'.")
             else:
                 progress_bar = st.progress(0)
                 status_text = st.empty()
@@ -450,14 +500,22 @@ if uploaded_file is not None:
                     status_text.markdown(f"Processing {i + 1} of {len(audio_urls_to_process)}")
 
                     try:
-                        # Use the new transcription pipeline
-                        transcription = transcribe_with_diarization(
-                            audio_url=audio_url,
-                            assemblyai_key=assemblyai_key,
-                            pyannote_key=pyannote_key,
-                            claude_key=claude_key,
-                            language="es"
-                        )
+                        if only_assembly_checkbox:
+                            # Use only AssemblyAI
+                            transcription = transcribe_only_assemblyai(
+                                audio_url=audio_url,
+                                assemblyai_key=assemblyai_key,
+                                language="es"
+                            )
+                        else:
+                            # Use full pipeline with Pyannote and Claude
+                            transcription = transcribe_with_diarization(
+                                audio_url=audio_url,
+                                assemblyai_key=assemblyai_key,
+                                pyannote_key=pyannote_key,
+                                claude_key=claude_key,
+                                language="es"
+                            )
                         
                         processed_transcriptions[current_id] = transcription
 
@@ -470,33 +528,33 @@ if uploaded_file is not None:
                     if current_id in processed_transcriptions:
                         df.at[idx, transcript_column] = processed_transcriptions[current_id]
 
-                for col, dtype in original_dtypes.items():
-                    if col in df.columns:
-                        df[col] = df[col].astype(dtype)
+            for col, dtype in original_dtypes.items():
+                if col in df.columns:
+                    df[col] = df[col].astype(dtype)
 
-                st.success("Transcription completed!")
+            st.success("Transcription completed!")
 
-                st.subheader("Preview of Results")
-                st.dataframe(df)
+            st.subheader("Preview of Results")
+            st.dataframe(df)
 
-                st.subheader("Download Results")
+            st.subheader("Download Results")
 
-                csv_data = df.to_csv(index=False)
-                b64_csv = base64.b64encode(csv_data.encode()).decode()
-                st.markdown(
-                    f'<a href="data:text/csv;base64,{b64_csv}" download="transcriptions.csv" class="stButton">Download CSV</a>',
-                    unsafe_allow_html=True
-                )
+            csv_data = df.to_csv(index=False)
+            b64_csv = base64.b64encode(csv_data.encode()).decode()
+            st.markdown(
+                f'<a href="data:text/csv;base64,{b64_csv}" download="transcriptions.csv" class="stButton">Download CSV</a>',
+                unsafe_allow_html=True
+            )
 
-                buffer = io.BytesIO()
-                with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
-                    df.to_excel(writer, index=False)
-                excel_data = buffer.getvalue()
-                b64_excel = base64.b64encode(excel_data).decode()
-                st.markdown(
-                    f'<a href="data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{b64_excel}" download="transcriptions.xlsx" class="stButton">Download Excel</a>',
-                    unsafe_allow_html=True
-                )
+            buffer = io.BytesIO()
+            with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+                df.to_excel(writer, index=False)
+            excel_data = buffer.getvalue()
+            b64_excel = base64.b64encode(excel_data).decode()
+            st.markdown(
+                f'<a href="data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{b64_excel}" download="transcriptions.xlsx" class="stButton">Download Excel</a>',
+                unsafe_allow_html=True
+            )
 
     except Exception as e:
         st.error(f"Error processing file: {e}")
