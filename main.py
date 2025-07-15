@@ -300,6 +300,7 @@ When given a new transcript, return only the full conversation with corrected sp
     )
     
     final_text = response.content[0].text
+    final_text = re.sub(r'(\\n|\n|\s*\+\s*)', ' ', final_text).strip()
     return final_text
 
 @st.cache_data(show_spinner="Transcribing audio, this may take a while...", persist=True)

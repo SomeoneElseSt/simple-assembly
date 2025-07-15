@@ -9,9 +9,6 @@ from typing import List, Dict, Optional, Tuple
 import anthropic
 import os
 import sys
-from dotenv import load_dotenv
-
-load_dotenv()
 
 # ----------------------
 # CONFIGURATION FUNCTION
@@ -46,44 +43,6 @@ def init(
 # ----------------------
 # UTILITY FUNCTIONS
 # ----------------------
-def format_transcription(text: str) -> str:
-    """
-    Format transcription text by adding line breaks between USER and AI turns.
-    
-    Args:
-        text (str): The original transcription text
-        
-    Returns:
-        str: Formatted text with line breaks between turns
-    """
-    if pd.isna(text) or text == "":
-        return text
-    
-    # Convert to string in case it's not already
-    text = str(text)
-    
-    # Pattern to match USER: or AI: at the beginning of turns
-    # This will match variations like "USER:", "AI:", "User:", "Ai:", etc.
-    pattern = r'((?:USER|AI|User|Ai|USUARIO|IA):\s*)'
-    
-    # Split the text by the pattern but keep the delimiters
-    parts = re.split(pattern, text)
-    
-    # Remove empty parts and reconstruct with line breaks
-    formatted_parts = []
-    for i, part in enumerate(parts):
-        if part.strip():  # Only add non-empty parts
-            if re.match(r'(?:USER|AI|User|Ai|USUARIO|IA):\s*', part):
-                # This is a turn marker, add newline before it (except for the first one)
-                if formatted_parts:
-                    formatted_parts.append('\n')
-                formatted_parts.append(part)
-            else:
-                # This is the content of the turn
-                formatted_parts.append(part)
-    
-    return ''.join(formatted_parts)
-
 def start_pyannote_diarization(audio_url: str, pyannote_token: str, num_speakers: int = 2) -> str:
     headers = {
         "Authorization": f"Bearer {pyannote_token}",
@@ -316,13 +275,7 @@ def main(config):
     output_format = config["output_format"].lower()
     assemblyai_key = config["assemblyai_key"]
     pyannote_key = config["pyannote_key"]
-    claude_key = config["claude_key"]    
-    if not assemblyai_key:
-        raise ValueError("ASSEMBLYAI_KEY not found in environment variables")
-    if not pyannote_key:
-        raise ValueError("PYANNOTE_KEY not found in environment variables")
-    if not claude_key:
-        raise ValueError("CLAUDE_KEY not found in environment variables")
+    claude_key = config["claude_key"]
     url_column = config["url_column"]
     transcript_column = config["transcript_column"]
     create_new_column = config["create_new_column"]
@@ -405,15 +358,13 @@ def main(config):
         current_id = str(row[id_column]) if use_id_matching else str(idx)
         if current_id in processed_transcriptions:
             debug_trans = processed_transcriptions[current_id]
-            formatted_trans = format_transcription(debug_trans)
-            df.at[idx, transcript_column] = formatted_trans
+            df.at[idx, transcript_column] = debug_trans
 
     for col, dtype in original_dtypes.items():
         if col in df.columns:
             df[col] = df[col].astype(dtype)
 
-    # Clean up transcription column but preserve the line breaks we added
-    df[transcript_column] = df[transcript_column].astype(str).str.replace(r'[\r\t]+', ' ', regex=True)
+    df[transcript_column] = df[transcript_column].astype(str).str.replace(r'[\n\r\t]+', ' ', regex=True)
     base, ext = os.path.splitext(os.path.basename(input_file))
     output_file = f"{base}_transcribed.{output_format}"
     if output_format == "csv":
@@ -427,17 +378,17 @@ def main(config):
 
 if __name__ == "__main__":
     config = init(
-        input_file="novedades.csv",  # or "input.csv"
+        input_file="transcribe.csv",  # or "input.csv"
         output_format="csv",      # or "xlsx"
-        assemblyai_key=os.getenv("ASSEMBLYAI_KEY"),
-        pyannote_key=os.getenv("PYANNOTE_KEY"),
-        claude_key=os.getenv("CLAUDE_KEY"),
+        assemblyai_key=""" ",
+        pyannote_key="sk_d937f62445fb4a378cd2373502c1f4d8",
+        claude_key="""",
         url_column="grabacion_url",
         transcript_column="new_transcripcion",
-        create_new_column=False, 
+        create_new_column=False,
         only_assembly=False, # if true, only assemblyai will be used, so no diarization 
         use_id_matching=True,
-        id_column="call_id",
+        id_column="id",
         filter_min_len=False,
         min_chars=200,
         stop_words=[],
