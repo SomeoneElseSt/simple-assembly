@@ -9,6 +9,9 @@ from typing import List, Dict, Optional, Tuple
 import anthropic
 import os
 import sys
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # ----------------------
 # CONFIGURATION FUNCTION
@@ -275,7 +278,13 @@ def main(config):
     output_format = config["output_format"].lower()
     assemblyai_key = config["assemblyai_key"]
     pyannote_key = config["pyannote_key"]
-    claude_key = config["claude_key"]
+    claude_key = config["claude_key"]    
+    if not assemblyai_key:
+        raise ValueError("ASSEMBLYAI_KEY not found in environment variables")
+    if not pyannote_key:
+        raise ValueError("PYANNOTE_KEY not found in environment variables")
+    if not claude_key:
+        raise ValueError("CLAUDE_KEY not found in environment variables")
     url_column = config["url_column"]
     transcript_column = config["transcript_column"]
     create_new_column = config["create_new_column"]
@@ -380,9 +389,9 @@ if __name__ == "__main__":
     config = init(
         input_file="transcribe.csv",  # or "input.csv"
         output_format="csv",      # or "xlsx"
-        assemblyai_key=""" ",
-        pyannote_key="sk_d937f62445fb4a378cd2373502c1f4d8",
-        claude_key="""",
+        assemblyai_key=os.getenv("ASSEMBLYAI_KEY"),
+        pyannote_key=os.getenv("PYANNOTE_KEY"),
+        claude_key=os.getenv("CLAUDE_KEY"),
         url_column="grabacion_url",
         transcript_column="new_transcripcion",
         create_new_column=False,
