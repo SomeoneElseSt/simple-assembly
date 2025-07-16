@@ -270,28 +270,31 @@ def relabel_speakers_with_claude(segments: List[Dict], claude_key: str) -> str:
     
     transcript = "\n".join([f"{seg['speaker']}: {seg['text'].strip()}" for seg in valid_segments])
     
-    prompt = f"""You are a smart and precise assistant. Your task is to relabel speaker tags in transcripts of conversations between an AI assistant and a human user.
+    prompt = f"""  You are a smart and precise assistant. Your task is to relabel speaker tags in transcripts of conversations between an AI assistant and a human user.
 
-Here is the transcript:
+    Here is the transcript:
 
-{transcript}
+    {transcript}
 
-The transcript you receive will have inconsistent speaker labels (e.g., SPEAKER_00, SPEAKER_01). Your job is to:
-• Replace each speaker label with either:
-• AI: — for the virtual assistant
-• USER: — for the human user
-• The AI always speaks first in every conversation.
-• Keep the content of the messages exactly as it is.
-• Output only the relabeled conversation as plain text, with no extra comments, headers, or formatting.
+    The transcript you receive will have inconsistent speaker labels (e.g., SPEAKER_00, SPEAKER_01). Your job is to:
+    • Replace each speaker label with either:
+        • AI: — for the virtual assistant
+        • USER: — for the human user
+    • The AI always speaks first in every conversation.
+    • You will apply slight corrections related to issues of the transcription engine. Specifically: 
+        • These transcriptions are from calls in Spanish. If any part of the transcript is on English, apply literal translations to Spanish that make common sense. For example, if you see 'Hello, Hello' this is wrong and should be translated to 'Hola, Hola'. This applies to just about any language other than Spanish that appears in calls.  
+        • These transcriptions might come with chopped off parts. For example, parts of the transcript where the assistant is speaking, such as asking for payment promise, should generally not be cut off, because the assistant asks this continously. Wherever logical (wherever it is absolutetly obvious that the assistant or user actually did complete their sentence, but the dieratization engine cut them off), you should change the transcript to have coherent dieratization (so assigning the coherent sentence to the right speaker), without changing any of the actual content. It is more like realignment based on where it is obvious that the assistant or user actually did complete/continue their sentence at some point.
+    • Output only the relabeled conversation as plain text, with no extra comments, headers, or formatting.
 
-Here is an example of the desired output:
+    Here is an example of the desired output:
 
-AI: Hello, how can I help you today?
-USER: I need help with my account.
-AI: Sure, I'd be happy to assist.
-USER: I'm having trouble logging in.
+    AI: Hello, how can I help you today?
+    USER: I need help with my account.
+    AI: Sure, I'd be happy to assist.
+    USER: I'm having trouble logging in.
 
-When given a new transcript, return only the full conversation with corrected speaker labels. Do not explain anything—just output the result."""
+    When given a new transcript, return only the full conversation with corrected speaker labels. Do not explain anything—just output the result. Do not include new line markers such as "/n" or "+" on new lines, clean these.
+"""
     
     response = client.messages.create(
         model="claude-3-5-haiku-20241022",
