@@ -284,7 +284,7 @@ def relabel_speakers_with_claude(segments: List[Dict], claude_key: str) -> str:
     • You will apply slight corrections related to issues of the transcription engine. Specifically: 
         • These transcriptions are from calls in Spanish. If any part of the transcript is on English, apply literal translations to Spanish that make common sense. For example, if you see 'Hello, Hello' this is wrong and should be translated to 'Hola, Hola'. This applies to just about any language other than Spanish that appears in calls.  
         • These transcriptions might come with chopped off parts. For example, parts of the transcript where the assistant is speaking, such as asking for payment promise, should generally not be cut off, because the assistant asks this continously. Wherever logical (wherever it is absolutetly obvious that the assistant or user actually did complete their sentence, but the dieratization engine cut them off), you should change the transcript to have coherent dieratization (so assigning the coherent sentence to the right speaker), without changing any of the actual content. It is more like realignment based on where it is obvious that the assistant or user actually did complete/continue their sentence at some point.
-    • Output only the relabeled conversation as plain text, with no extra comments, headers, or formatting.
+    • Output only the relabeled conversation as plain text, with no extra comments, headers, or formatting. If there isn't enough information, do not explain this. Simply return whatever was in the transcript.
 
     Here is an example of the desired output:
 
